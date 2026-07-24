@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#181b22; --panel2:#1f232c; --border:#2a2f3a;
+    --text:#e8eaf0; --muted:#8b91a0; --accent:#4f8cff; --accent-h:#3d78e8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px}
+  .grid>*{min-width:0}
+  @media(max-width:760px){
+    .grid{grid-template-columns:minmax(0,1fr)}
+    body{padding:12px}
+    .card{padding:14px}
+    .row{flex-wrap:wrap}
+    .row>div{flex:1 1 45%}
+  }
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px}
+  label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.05em}
+  textarea{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:14px;resize:vertical;min-height:70px;font-family:inherit;overflow-wrap:anywhere}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  select{background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;width:100%}
+  input[type=color]{width:100%;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);padding:2px;cursor:pointer}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+  .row{display:flex;gap:12px}
+  .row>div{flex:1}
+  button{cursor:pointer;border:none;border-radius:8px;font-size:14px;font-weight:600;padding:10px 16px;transition:background .15s}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:16px}
+  .btn-primary:hover{background:var(--accent-h)}
+  .btn-sm{background:var(--panel2);color:var(--text);border:1px solid var(--border);font-size:12px;padding:6px 12px;font-weight:500}
+  .btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+  .preview{display:flex;flex-direction:column;align-items:center;gap:14px;align-self:start}
+  #qrBox{background:#fff;border-radius:10px;padding:16px;display:none;max-width:100%}
+  #qrBox svg{display:block;max-width:100%;height:auto}
+  .dl{display:none;gap:10px}
+  .placeholder{color:var(--muted);font-size:13px;text-align:center;padding:40px 0}
+  h2{font-size:15px;margin-bottom:12px}
+  .hist-item{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--panel2)}
+  .hist-item .thumb{width:44px;height:44px;background:#fff;border-radius:6px;padding:3px;flex-shrink:0}
+  .hist-item .thumb svg{width:100%;height:100%}
+  .hist-txt{flex:1;min-width:0}
+  .hist-txt .t{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hist-txt .d{font-size:11px;color:var(--muted)}
+  .hist-actions{display:flex;gap:6px;flex-shrink:0}
+  .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px}
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .icon-btn.del:hover{color:#ff5c5c;border-color:#ff5c5c}
+  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>QR Generator</h1>
+  <div class="sub">Generate QR codes, keep a history, download as PNG or SVG.</div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <label>Content (URL or text)</label>
+        <textarea id="input" placeholder="https://example.com"></textarea>
+        <div class="row">
+          <div>
+            <label>Size (PNG)</label>
+            <select id="size">
+              <option value="256">256 px</option>
+              <option value="512" selected>512 px</option>
+              <option value="1024">1024 px</option>
+              <option value="2048">2048 px</option>
+            </select>
+          </div>
+          <div>
+            <label>Error correction</label>
+            <select id="ecl">
+              <option value="L">L (7%)</option>
+              <option value="M" selected>M (15%)</option>
+              <option value="Q">Q (25%)</option>
+              <option value="H">H (30%)</option>
+            </select>
+          </div>
+        </div>
+        <label>Appearance</label>
+        <div class="row">
+          <div>
+            <label style="margin-top:0">Foreground</label>
+            <input type="color" id="fg" value="#000000">
+          </div>
+          <div>
+            <label style="margin-top:0">Background</label>
+            <input type="color" id="bg" value="#ffffff">
+          </div>
+          <div>
+            <label style="margin-top:0">Style</label>
+            <select id="style">
+              <option value="square" selected>Square</option>
+              <option value="rounded">Rounded</option>
+              <option value="dots">Dots</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0">Eye style</label>
+            <select id="eye">
+              <option value="square" selected>Square</option>
+              <option value="rounded">Rounded</option>
+              <option value="circle">Circle</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;align-items:center">
+          <div>
+            <label style="margin-top:0">Margin: <span id="marginVal">4</span> modules</label>
+            <input type="range" id="margin" min="0" max="10" value="4">
+          </div>
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:6px;padding-top:18px">
+            <input type="checkbox" id="transparent" style="width:auto">
+            <label for="transparent" style="margin:0;cursor:pointer">Transparent BG</label>
+          </div>
+        </div>
+        <button class="btn-primary" id="genBtn">Generate QR Code</button>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="hist-head">
+          <h2>History</h2>
+          <button class="btn-sm" id="clearBtn">Clear all</button>
+        </div>
+        <div id="history"></div>
+      </div>
+    </div>
+    <div class="card preview">
+      <h2 style="align-self:flex-start">Preview</h2>
+      <div id="qrBox"></div>
+      <div class="placeholder" id="placeholder">Your QR code will appear here</div>
+      <div class="dl" id="dlBtns">
+        <button class="btn-sm" id="dlPng">⬇ PNG</button>
+        <button class="btn-sm" id="dlSvg">⬇ SVG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let history = [];
+let current = null; // {text, ecl, size, date}
+
+const $ = id => document.getElementById(id);
+
+// proper UTF-8 encoding for unicode/emoji content
+if(typeof qrcode !== 'undefined' && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']){
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+}
+
+function makeQR(text, ecl){
+  if(typeof qrcode === 'undefined') throw new Error('QR library failed to load — check your internet connection and reload the page.');
+  const qr = qrcode(0, ecl); // 0 = auto type number
+  qr.addData(text);
+  qr.make();
+  return qr;
+}
+
+function styleOf(entry){
+  return Object.assign({fg:'#000000', bg:'#ffffff', style:'square', eye:'square', margin:4, transparent:false}, entry.vis || {});
+}
+
+// finder pattern (eye) positions: top-left, top-right, bottom-left
+function eyeOrigins(n){ return [[0,0],[n-7,0],[0,n-7]]; }
+function inEye(r,c,n){
+  return eyeOrigins(n).some(([ex,ey]) => c>=ex && c<ex+7 && r>=ey && r<ey+7);
+}
+
+function svgEye(ex, ey, v){
+  const fg = v.fg;
+  if(v.eye === 'circle'){
+    return '<path fill-rule="evenodd" fill="'+fg+'" d="'
+      +'M '+(ex+3.5)+' '+ey+' a 3.5 3.5 0 1 0 0 7 a 3.5 3.5 0 1 0 0 -7 Z '
+      +'M '+(ex+3.5)+' '+(ey+1)+' a 2.5 2.5 0 1 1 0 5 a 2.5 2.5 0 1 1 0 -5 Z"/>'
+      +'<circle cx="'+(ex+3.5)+'" cy="'+(ey+3.5)+'" r="1.5" fill="'+fg+'"/>';
+  }
+  const rx = v.eye === 'rounded' ? ' rx="1"' : '';
+  const rxi = v.eye === 'rounded' ? ' rx="0.6"' : '';
+  return '<path fill-rule="evenodd" fill="'+fg+'" d="'
+    + rectPath(ex,ey,7,7, v.eye==='rounded'?1:0)
+    + rectPath(ex+1,ey+1,5,5, v.eye==='rounded'?0.7:0) + '"/>'
+    + '<rect x="'+(ex+2)+'" y="'+(ey+2)+'" width="3" height="3"'+rxi.replace('0.6','0.8')+' fill="'+fg+'"/>';
+}
+
+function rectPath(x,y,w,h,r){
+  if(!r) return 'M '+x+' '+y+' h '+w+' v '+h+' h '+(-w)+' Z ';
+  return 'M '+(x+r)+' '+y+' h '+(w-2*r)+' a '+r+' '+r+' 0 0 1 '+r+' '+r
+    +' v '+(h-2*r)+' a '+r+' '+r+' 0 0 1 -'+r+' '+r
+    +' h '+(2*r-w)+' a '+r+' '+r+' 0 0 1 -'+r+' -'+r
+    +' v '+(2*r-h)+' a '+r+' '+r+' 0 0 1 '+r+' -'+r+' Z ';
+}
+
+function svgString(qr, entry){
+  const v = styleOf(entry);
+  const n = qr.getModuleCount();
+  const total = n + 2*v.margin;
+  let shapes = '';
+  eyeOrigins(n).forEach(([ex,ey]) => { shapes += svgEye(ex+v.margin, ey+v.margin, v); });
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+    if(!qr.isDark(r,c) || inEye(r,c,n)) continue;
+    const x = c + v.margin, y = r + v.margin;
+    if(v.style === 'dots'){
+      shapes += '<circle cx="'+(x+0.5)+'" cy="'+(y+0.5)+'" r="0.42" fill="'+v.fg+'"/>';
+    } else if(v.style === 'rounded'){
+      shapes += '<rect x="'+(x+0.04)+'" y="'+(y+0.04)+'" width="0.92" height="0.92" rx="0.28" fill="'+v.fg+'"/>';
+    } else {
+      shapes += '<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+v.fg+'"/>';
+    }
+  }
+  const bgRect = v.transparent ? '' : '<rect width="'+total+'" height="'+total+'" fill="'+v.bg+'"/>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+total+' '+total+'" shape-rendering="'+(v.style==='square'&&v.eye==='square'?'crispEdges':'geometricPrecision')+'">'+bgRect+shapes+'</svg>';
+}
+
+function render(entry){
+  current = entry;
+  const qr = makeQR(entry.text, entry.ecl);
+  $('qrBox').innerHTML = svgString(qr, entry);
+  const v = styleOf(entry);
+  $('qrBox').style.background = v.transparent ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 16px 16px' : v.bg;
+  const svg = $('qrBox').querySelector('svg');
+  svg.setAttribute('width','220'); svg.setAttribute('height','220');
+  $('qrBox').style.display = 'block';
+  $('placeholder').style.display = 'none';
+  $('dlBtns').style.display = 'flex';
+}
+
+function slug(t){
+  return (t.replace(/^https?:\/\//,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'qrcode');
+}
+
+function download(name, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+function dlSvg(entry){
+  const qr = makeQR(entry.text, entry.ecl);
+  download(slug(entry.text)+'.svg', new Blob([svgString(qr, entry)], {type:'image/svg+xml'}));
+}
+
+function addRoundRectPath(ctx,x,y,w,h,r){
+  if(!r){ ctx.rect(x,y,w,h); return; }
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r);
+  ctx.fill();
+}
+
+function dlPng(entry){
+  const qr = makeQR(entry.text, entry.ecl);
+  const v = styleOf(entry);
+  const size = entry.size;
+  const count = qr.getModuleCount();
+  const cell = size / (count + 2*v.margin);
+  const off = v.margin * cell;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if(!v.transparent){ ctx.fillStyle = v.bg; ctx.fillRect(0,0,size,size); }
+  ctx.fillStyle = v.fg;
+  // eyes
+  eyeOrigins(count).forEach(([ex,ey])=>{
+    const x = off + ex*cell, y = off + ey*cell;
+    if(v.eye === 'circle'){
+      ctx.beginPath();
+      ctx.arc(x+3.5*cell, y+3.5*cell, 3.5*cell, 0, Math.PI*2);
+      ctx.arc(x+3.5*cell, y+3.5*cell, 2.5*cell, 0, Math.PI*2, true);
+      ctx.fill('evenodd');
+      ctx.beginPath(); ctx.arc(x+3.5*cell, y+3.5*cell, 1.5*cell, 0, Math.PI*2); ctx.fill();
+    } else {
+      const r = v.eye==='rounded' ? cell : 0;
+      ctx.beginPath();
+      addRoundRectPath(ctx, x, y, 7*cell, 7*cell, r);
+      addRoundRectPath(ctx, x+cell, y+cell, 5*cell, 5*cell, r*0.7);
+      ctx.fill('evenodd');
+      ctx.beginPath();
+      addRoundRectPath(ctx, x+2*cell, y+2*cell, 3*cell, 3*cell, r*0.8);
+      ctx.fill();
+    }
+  });
+  for(let r=0;r<count;r++)for(let c=0;c<count;c++){
+    if(!qr.isDark(r,c) || inEye(r,c,count)) continue;
+    const x = off + c*cell, y = off + r*cell;
+    if(v.style === 'dots'){
+      ctx.beginPath(); ctx.arc(x+cell/2, y+cell/2, cell*0.42, 0, Math.PI*2); ctx.fill();
+    } else if(v.style === 'rounded'){
+      roundRect(ctx, x+cell*0.04, y+cell*0.04, cell*0.92, cell*0.92, cell*0.28);
+    } else {
+      ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cell), Math.ceil(cell));
+    }
+  }
+  canvas.toBlob(b => download(slug(entry.text)+'.png', b), 'image/png');
+}
+
+function renderHistory(){
+  const box = $('history');
+  if(!history.length){ box.innerHTML = '<div class="empty">No QR codes yet</div>'; return; }
+  box.innerHTML = '';
+  history.forEach((e,i)=>{
+    const div = document.createElement('div');
+    div.className = 'hist-item';
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.innerHTML = svgString(makeQR(e.text, e.ecl), e);
+    thumb.style.background = styleOf(e).transparent ? '#fff' : styleOf(e).bg;
+    const txt = document.createElement('div');
+    txt.className = 'hist-txt';
+    txt.innerHTML = '<div class="t"></div><div class="d">'+e.date+' · ECL '+e.ecl+'</div>';
+    txt.querySelector('.t').textContent = e.text;
+    const actions = document.createElement('div');
+    actions.className = 'hist-actions';
+    const mk = (label, cls, fn)=>{
+      const b = document.createElement('button');
+      b.className = 'icon-btn'+(cls?' '+cls:''); b.textContent = label; b.onclick = fn;
+      return b;
+    };
+    actions.append(
+      mk('PNG','',()=>dlPng(e)),
+      mk('SVG','',()=>dlSvg(e)),
+      mk('✕','del',()=>{history.splice(i,1); renderHistory();})
+    );
+    thumb.style.cursor = txt.style.cursor = 'pointer';
+    thumb.onclick = txt.onclick = ()=>{
+      $('input').value = e.text; $('ecl').value = e.ecl;
+      const v = styleOf(e);
+      $('fg').value = v.fg; $('bg').value = v.bg; $('style').value = v.style; $('eye').value = v.eye;
+      $('margin').value = v.margin; $('marginVal').textContent = v.margin;
+      $('transparent').checked = v.transparent;
+      render(e);
+    };
+    div.append(thumb, txt, actions);
+    box.appendChild(div);
+  });
+}
+
+$('genBtn').onclick = ()=>{
+  const text = $('input').value.trim();
+  if(!text){ $('input').focus(); return; }
+  const entry = {
+    text,
+    ecl: $('ecl').value,
+    size: parseInt($('size').value),
+    vis: currentVis(),
+    date: new Date().toLocaleString()
+  };
+  try { render(entry); } catch(err){
+    const bytes = new TextEncoder().encode(text).length;
+    const cap = {L:2953, M:2331, Q:1663, H:1273}[entry.ecl];
+    if(bytes > cap){
+      alert('Content is '+bytes+' bytes; max for error correction '+entry.ecl+' is '+cap+'. Shorten the text or lower the error correction level.');
+    } else {
+      alert('Failed to generate QR code: ' + (err.message || err));
+    }
+    return;
+  }
+  const dup = history.findIndex(h=>h.text===text && h.ecl===entry.ecl);
+  if(dup>-1) history.splice(dup,1);
+  history.unshift(entry);
+  if(history.length>50) history.pop();
+  renderHistory();
+};
+
+function currentVis(){
+  return {
+    fg: $('fg').value,
+    bg: $('bg').value,
+    style: $('style').value,
+    eye: $('eye').value,
+    margin: parseInt($('margin').value),
+    transparent: $('transparent').checked
+  };
+}
+
+// live preview when adjusting visuals
+['fg','bg','style','eye','margin','transparent'].forEach(id=>{
+  $(id).addEventListener('input', ()=>{
+    $('marginVal').textContent = $('margin').value;
+    if(current){ current.vis = currentVis(); render(current); renderHistory(); }
+  });
+});
+
+$('input').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('genBtn').click(); }
+});
+$('dlPng').onclick = ()=>{ if(current){ current.size = parseInt($('size').value); dlPng(current);} };
+$('dlSvg').onclick = ()=>current && dlSvg(current);
+$('clearBtn').onclick = ()=>{ history = []; renderHistory(); };
+
+renderHistory();
+</script>
+</body>
+</html>
