@@ -3,12 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QR Generator</title>
+<title>Free QR Generator | GITLY</title>
+<meta name="description" content="Free online QR code generator. Create custom QR codes with colors, dot styles, eye shapes, and transparent backgrounds. Download as PNG or SVG. No sign-up, no watermark.">
+<meta property="og:title" content="Free QR Generator | GITLY">
+<meta property="og:description" content="Create custom QR codes with colors, styles, and transparent backgrounds. Download as PNG or SVG — free, no sign-up.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://qr.gitly.cc/">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://qr.gitly.cc/">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
   :root{
-    --bg:#0f1115; --panel:#181b22; --panel2:#1f232c; --border:#2a2f3a;
-    --text:#e8eaf0; --muted:#8b91a0; --accent:#4f8cff; --accent-h:#3d78e8;
+    --bg:#05070B; --panel:#10141C; --panel2:#0B0E15; --border:#2A313D;
+    --text:#F9FAFB; --muted:#8A93A1; --accent:#CCFF00; --accent-h:#B4E000;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
@@ -35,7 +42,7 @@
   .row{display:flex;gap:12px}
   .row>div{flex:1}
   button{cursor:pointer;border:none;border-radius:8px;font-size:14px;font-weight:600;padding:10px 16px;transition:background .15s}
-  .btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:16px}
+  .btn-primary{background:var(--accent);color:#05070B;width:100%;margin-top:16px}
   .btn-primary:hover{background:var(--accent-h)}
   .btn-sm{background:var(--panel2);color:var(--text);border:1px solid var(--border);font-size:12px;padding:6px 12px;font-weight:500}
   .btn-sm:hover{border-color:var(--accent);color:var(--accent)}
@@ -54,14 +61,14 @@
   .hist-actions{display:flex;gap:6px;flex-shrink:0}
   .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px}
   .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
-  .icon-btn.del:hover{color:#ff5c5c;border-color:#ff5c5c}
+  .icon-btn.del:hover{color:#C64F55;border-color:#C64F55}
   .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>QR Generator</h1>
+  <h1>Free QR Generator <span style="color:var(--accent)">| GITLY</span></h1>
   <div class="sub">Generate QR codes, keep a history, download as PNG or SVG.</div>
   <div class="grid">
     <div>
@@ -117,8 +124,8 @@
         </div>
         <div class="row" style="margin-top:12px;align-items:center">
           <div>
-            <label style="margin-top:0">Margin: <span id="marginVal">4</span> modules</label>
-            <input type="range" id="margin" min="0" max="10" value="4">
+            <label style="margin-top:0">Margin: <span id="marginVal">0</span> px</label>
+            <input type="range" id="margin" min="0" max="64" step="2" value="0">
           </div>
           <div style="flex:0 0 auto;display:flex;align-items:center;gap:6px;padding-top:18px">
             <input type="checkbox" id="transparent" style="width:auto">
@@ -167,7 +174,7 @@ function makeQR(text, ecl){
 }
 
 function styleOf(entry){
-  return Object.assign({fg:'#000000', bg:'#ffffff', style:'square', eye:'square', margin:4, transparent:false}, entry.vis || {});
+  return Object.assign({fg:'#000000', bg:'#ffffff', style:'square', eye:'square', margin:0, transparent:false}, entry.vis || {});
 }
 
 // finder pattern (eye) positions: top-left, top-right, bottom-left
@@ -203,12 +210,15 @@ function rectPath(x,y,w,h,r){
 function svgString(qr, entry){
   const v = styleOf(entry);
   const n = qr.getModuleCount();
-  const total = n + 2*v.margin;
+  const size = entry.size || 512;
+  const mpx = size > 2*v.margin ? v.margin : 0;
+  const m = mpx * n / (size - 2*mpx) || 0; // px margin as fractional modules
+  const total = n + 2*m;
   let shapes = '';
-  eyeOrigins(n).forEach(([ex,ey]) => { shapes += svgEye(ex+v.margin, ey+v.margin, v); });
+  eyeOrigins(n).forEach(([ex,ey]) => { shapes += svgEye(ex+m, ey+m, v); });
   for(let r=0;r<n;r++)for(let c=0;c<n;c++){
     if(!qr.isDark(r,c) || inEye(r,c,n)) continue;
-    const x = c + v.margin, y = r + v.margin;
+    const x = c + m, y = r + m;
     if(v.style === 'dots'){
       shapes += '<circle cx="'+(x+0.5)+'" cy="'+(y+0.5)+'" r="0.42" fill="'+v.fg+'"/>';
     } else if(v.style === 'rounded'){
@@ -272,8 +282,9 @@ function dlPng(entry){
   const v = styleOf(entry);
   const size = entry.size;
   const count = qr.getModuleCount();
-  const cell = size / (count + 2*v.margin);
-  const off = v.margin * cell;
+  const mpx = size > 2*v.margin ? v.margin : 0;
+  const cell = (size - 2*mpx) / count;
+  const off = mpx;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
